@@ -47,6 +47,10 @@ class MessageBroker:
 
     def shutdown(self):
         logger.info("Shutting down message broker")
+        with self._lock:
+            topics = list(self.topics.values())
+        for topic in topics:
+            topic.shutdown()
         self.executor.shutdown(wait=True)
         logger.info("Message broker shutdown complete")
 

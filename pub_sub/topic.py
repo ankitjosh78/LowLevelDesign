@@ -1,5 +1,6 @@
 from pub_sub.entities import DeliveryContext, DeliveryStatus, Message
 from pub_sub.subscriber import Subscriber
+from pub_sub.retry_scheduler import RetryScheduler
 import threading
 import logging
 
@@ -12,6 +13,7 @@ class Topic:
         self.name = name
         self.subscribers: set[Subscriber] = set()
         self.executor = shared_executor
+        self.retry_scheduler = RetryScheduler()
         self.dead_letter_queue: list[DeliveryContext] = []
         self._lock = threading.Lock()
         self._dlq_lock = threading.Lock()
@@ -40,11 +42,15 @@ class Topic:
             return
 
         if delivery.attempt < delivery.max_attempts:
+            backoff_delay = delivery.get_backoff_delay()
             delivery.increment_attempt()
             logger.warning(
-                f"Retrying delivery {delivery.delivery_id} to {subscriber.name}, attempt {delivery.attempt}"
+                f"Retrying delivery {delivery.delivery_id} to {subscriber.name}, "
+                f"attempt {delivery.attempt} after {backoff_delay}s backoff"
             )
-            self._dispatch(subscriber, delivery)
+            self.retry_scheduler.schedule_retry(
+                backoff_delay, self._dispatch, subscriber, delivery
+            )
         else:
             logger.error(
                 f"Delivery {delivery.delivery_id} to {subscriber.name} exhausted all retries"
@@ -81,3 +87,6 @@ class Topic:
         for subscriber in subscribers:
             delivery_context = DeliveryContext(message)
             self._dispatch(subscriber, delivery_context)
+
+    def shutdown(self):
+        self.retry_scheduler.shutdown()

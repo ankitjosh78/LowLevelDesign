@@ -17,10 +17,11 @@ class DeliveryStatus(Enum):
 
 
 class DeliveryContext:
-    def __init__(self, message: Message, max_attempts=3):
+    def __init__(self, message: Message, max_attempts=3, base_delay=1.0):
         self.delivery_id = str(uuid4())
         self.attempt = 1
         self.max_attempts = max_attempts
+        self.base_delay = base_delay
         self.status = DeliveryStatus.PENDING
         self.message = message
         self.error = None
@@ -34,3 +35,6 @@ class DeliveryContext:
 
     def increment_attempt(self):
         self.attempt += 1
+
+    def get_backoff_delay(self):
+        return self.base_delay * (2 ** (self.attempt - 1))

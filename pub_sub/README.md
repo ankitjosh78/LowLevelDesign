@@ -8,7 +8,7 @@ A thread-safe, asynchronous publish-subscribe message broker implementation in P
 - **Multiple topics** with independent message streams
 - **Multiple publishers** can publish to the same topic
 - **Multiple subscribers** per topic with concurrent processing
-- **Retry mechanism** with configurable max attempts
+- **Non-blocking retry mechanism** with exponential backoff using scheduled retry queue
 - **Dead Letter Queue (DLQ)** for failed messages
 - **Thread-safe operations** with proper locking
 - **Publisher tracking** with message count metrics
@@ -121,6 +121,14 @@ The `main.py` demonstrates:
 3. **Multiple publishers to same topic** - AppPublisher and BackendPublisher both publishing orders
 4. **Batch publishing** - Multiple analytics events published together
 
+### Testing Exponential Backoff
+
+```bash
+python -m pub_sub.examples.retry_demo
+```
+
+This demonstrates retry behavior with exponential backoff when a service fails.
+
 ## Design Decisions
 
 ### Thread Safety
@@ -132,6 +140,13 @@ The `main.py` demonstrates:
 ### Retry Logic
 
 - Configurable `max_attempts` (default: 3)
+- **Non-blocking exponential backoff**: Uses scheduled retry queue instead of blocking threads
+  - Formula: `base_delay * 2^(attempt - 1)`
+  - Example with `base_delay=1.0`: 1s, 2s, 4s, 8s...
+- **RetryScheduler**: Dedicated component with min-heap priority queue
+  - Separate daemon thread processes retries at scheduled times
+  - Worker threads never blocked waiting for retry delays
+  - Scales efficiently with thousands of pending retries
 - Automatic retry on failure or non-acknowledgment
 - Failed messages after max retries go to DLQ
 - Each retry tracked in `DeliveryContext`
@@ -142,6 +157,8 @@ The `main.py` demonstrates:
 - Each subscriber processes messages independently
 - Non-blocking publish operations
 - Callbacks handle retry logic
+- Separate retry scheduler thread for delayed retries
+- Worker threads stay available for new messages during retry backoff
 
 ## API Reference
 
@@ -185,10 +202,12 @@ delivery.message          # The Message object
 delivery.delivery_id      # Unique delivery ID
 delivery.attempt          # Current attempt number
 delivery.max_attempts     # Max retry attempts
+delivery.base_delay       # Base delay for exponential backoff
 delivery.status           # DeliveryStatus enum
 delivery.acknowledge()    # Mark as successful
 delivery.fail(error)      # Mark as failed
 delivery.increment_attempt()  # Increment retry count
+delivery.get_backoff_delay()  # Calculate current backoff delay
 ```
 
 ## Logging
@@ -229,20 +248,24 @@ pub_sub/
 ├── publisher.py        # Publisher implementation
 ├── subscriber.py       # Subscriber base class
 ├── topic.py           # Topic management and delivery
+├── retry_scheduler.py  # Non-blocking retry scheduler with priority queue
 ├── main.py            # Example usage
 └── examples/
     ├── __init__.py
-    └── services.py    # Example subscriber implementations
+    ├── services.py    # Example subscriber implementations
+    └── retry_demo.py  # Retry mechanism demonstration
 ```
 
 ## Learning Objectives
 
 This implementation demonstrates:
 
-- **Design patterns**: Observer, Publisher-Subscriber
-- **Concurrency**: Thread pools, locks, async processing
+- **Design patterns**: Observer, Publisher-Subscriber, Scheduler
+- **Concurrency**: Thread pools, locks, async processing, non-blocking retries
+- **Data structures**: Min-heap priority queue for scheduled retries
 - **Error handling**: Retries, DLQ, graceful degradation
 - **SOLID principles**: Single responsibility, open/closed
+- **Scalability**: Non-blocking architecture, efficient resource utilization
 - **Extensibility**: Easy to add new subscribers and features
 
 ## License
