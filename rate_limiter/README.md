@@ -2,6 +2,36 @@
 
 A thread-safe, extensible rate limiter implementation in Python for learning Low-Level Design (LLD) concepts.
 
+## Core Requirements
+
+The goal was to design a rate limiter with the following requirements:
+
+1. **Request validation** - decide if a client's request should be allowed or rejected
+2. **Per-client limits** - each client has independent rate limits
+3. **Configurable limits** - support different limits per client (e.g., 5 requests/60 seconds)
+4. **Multiple clients** - track state for many clients simultaneously
+5. **Thread safety** - handle concurrent requests from same/different clients
+6. **Fast lookups** - checking if request is allowed should be O(1) or O(log n)
+7. **Extensibility** - support multiple algorithms (Fixed Window, Sliding Window, Token Bucket, etc.)
+8. **Memory efficiency** - don't store unnecessary data
+
+## Implementation Approach
+
+Starting from these requirements, the design evolved through:
+
+1. **Core entities identified**: Client, ClientConfig, RateLimitState, RateLimiter, ClientRegistry
+2. **Responsibilities defined**:
+   - ClientRegistry manages client lifecycle
+   - RateLimiter coordinates rate limiting logic
+   - RateLimitState tracks request timestamps per client
+   - Strategy pattern for different algorithms
+3. **Key decisions**:
+   - Store only timestamps (not full requests) for memory efficiency
+   - Use deque for O(1) cleanup of old timestamps
+   - Dependency injection instead of singleton for testability
+   - Strategy pattern for extensibility (Fixed/Sliding Window)
+   - Per-client configuration via ClientConfig
+
 ## Features
 
 - **Multiple rate limiting strategies** - Fixed Window, Sliding Window (extensible to Token Bucket, Leaky Bucket)

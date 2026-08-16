@@ -2,6 +2,34 @@
 
 A thread-safe, asynchronous publish-subscribe message broker implementation in Python for learning Low-Level Design (LLD) concepts.
 
+## Core Requirements
+
+The goal was to design a publish-subscribe message broker with the following requirements:
+
+1. **Publishers** can publish messages to topics
+2. **Subscribers** can subscribe to topics and receive messages
+3. **Multiple subscribers** per topic, each receiving messages independently
+4. **Asynchronous delivery** - messages delivered concurrently without blocking publishers
+5. **Retry mechanism** - failed deliveries should be retried with backoff
+6. **Dead Letter Queue** - messages that fail all retries should be stored
+7. **Thread safety** - handle concurrent publishers and subscribers
+8. **Scalability** - support multiple topics and efficient message routing
+
+## Implementation Approach
+
+Starting from these requirements, the design evolved through:
+
+1. **Core entities identified**: Message, Topic, Subscriber, Publisher, Broker
+2. **Responsibilities defined**: 
+   - Broker manages topics and thread pool
+   - Topic manages subscribers and dispatches messages
+   - DeliveryContext tracks retry state per message-subscriber pair
+3. **Key decisions**:
+   - ThreadPoolExecutor for async delivery
+   - Strategy pattern for retry scheduling (non-blocking)
+   - Separate RetryScheduler with priority queue to avoid blocking worker threads
+   - Per-delivery state tracking instead of global locks
+
 ## Features
 
 - **Asynchronous message delivery** using ThreadPoolExecutor
