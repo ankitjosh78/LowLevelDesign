@@ -14,6 +14,11 @@ Extensible rate limiter with multiple strategies (Fixed Window, Sliding Window) 
 
 **Concepts**: Strategy pattern, dependency injection, efficient data structures
 
+### [Parking Lot System](./parking_lot)
+Multi-level parking lot with entry/exit gates, multiple vehicle types, and dynamic pricing strategies.
+
+**Concepts**: Strategy pattern, thread safety, ticket validation, modular architecture
+
 ## Learning Approach
 
 **Read the requirements** → **Think through your design** → **Identify entities, responsibilities, relationships** → **Implement iteratively**
@@ -32,12 +37,15 @@ python -m pub_sub.examples.retry_demo
 
 # Rate Limiter
 python -m rate_limiter.main
+
+# Parking Lot
+python -m parking_lot.main
 ```
 
 ## Future
 
-- [ ] Parking Lot System
-- [ ] Elevator System
 - [ ] LRU Cache
+- [ ] Elevator System
 - [ ] Task Scheduler
 - [ ] URL Shortener
+- [ ] Distributed Cache
